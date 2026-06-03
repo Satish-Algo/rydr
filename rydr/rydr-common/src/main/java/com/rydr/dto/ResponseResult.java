@@ -9,68 +9,83 @@ import com.rydr.constatnt.BusinessInterfaceStatus;
 import java.io.Serializable;
 
 /**
- * Generic response result handler
+ * Generic unified response wrapper for all microservice APIs.
  *
- * @date 2018/8/14
+ * @param <T> Payload data type
+ * @author Rydr Team
  */
 @Data
 @Accessors(chain = true)
 @SuppressWarnings("unchecked")
 public class ResponseResult<T> implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private int code;
     private String message;
     private T data;
 
     /**
-     * Return success data (status: 200)
+     * Return success response with data payload (status: 200).
      *
-     * @param data data content
-     * @param <T>  data type
-     * @return ResponseResult instance
+     * @param data response payload content
+     * @param <T>  payload type
+     * @return ResponseResult instance wrapping the payload
      */
-    public static <T> ResponseResult success(T data) {
-        return new ResponseResult().setCode(BusinessInterfaceStatus.SUCCESS.getCode()).setMessage(BusinessInterfaceStatus.SUCCESS.getValue()).setData(data);
+    public static <T> ResponseResult<T> success(T data) {
+        return new ResponseResult<T>()
+                .setCode(BusinessInterfaceStatus.SUCCESS.getCode())
+                .setMessage(BusinessInterfaceStatus.SUCCESS.getValue())
+                .setData(data);
     }
 
     /**
-     * Return success data (status: 200)
+     * Return default empty success response (status: 200).
      *
-     * @return ResponseResult instance
+     * @param <T> payload type
+     * @return ResponseResult instance without payload
      */
-    public static ResponseResult success() {
+    public static <T> ResponseResult<T> success() {
         return success(null);
     }
 
     /**
-     * Return error data (status: 500)
+     * Return internal server error response (status: 500).
      *
-     * @param data error content
-     * @param <T>  data type
-     * @return ResponseResult instance
+     * @param data error detail payload
+     * @param <T>  payload type
+     * @return ResponseResult instance wrapping error details
      */
-    public static <T> ResponseResult fail(T data) {
-        return new ResponseResult().setCode(HttpStatus.INTERNAL_SERVER_ERROR.value()).setMessage(HttpStatus.INTERNAL_SERVER_ERROR.name()).setData(data);
+    public static <T> ResponseResult<T> fail(T data) {
+        return new ResponseResult<T>()
+                .setCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .setMessage(HttpStatus.INTERNAL_SERVER_ERROR.name())
+                .setData(data);
     }
 
     /**
-     * Custom error data response
+     * Custom error response with specific error code and message.
      *
-     * @param code    error code
-     * @param message error message
+     * @param code    error status code
+     * @param message human-readable error description
+     * @param <T>     payload type
      * @return ResponseResult instance
      */
-    public static ResponseResult fail(int code, String message) {
-        return new ResponseResult().setCode(code).setMessage(message);
+    public static <T> ResponseResult<T> fail(int code, String message) {
+        return new ResponseResult<T>().setCode(code).setMessage(message);
     }
 
     /**
-     * @param code    error code
-     * @param message error message
-     * @param data    error content
+     * Custom error response with code, message, and additional error data payload.
+     *
+     * @param code    error status code
+     * @param message human-readable error description
+     * @param data    error detail data
+     * @param <T>     payload type
      * @return ResponseResult instance
      */
-    public static ResponseResult fail(int code, String message, String data) {
-        return new ResponseResult().setCode(code).setMessage(message).setData(data);
+    public static <T> ResponseResult<T> fail(int code, String message, T data) {
+        return new ResponseResult<T>().setCode(code).setMessage(message).setData(data);
     }
 }
+
