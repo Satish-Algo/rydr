@@ -10,80 +10,98 @@ import java.util.Date;
 import java.util.Optional;
 
 /**
- * Unit conversion utility class
+ * Utility class providing distance, duration, and pricing unit conversions for ride valuation.
  *
- * @date 2018/08/15
+ * @author Rydr Team
  */
 public class UnitConverter {
 
+    private static final BigDecimal METERS_PER_KM = new BigDecimal("1000");
+    private static final BigDecimal SECONDS_PER_MINUTE = new BigDecimal("60");
+
     /**
-     * Convert Date to LocalDateTime
+     * Convert Date to LocalDateTime using system default time zone.
      *
-     * @param date Date
-     * @return LocalDateTime
+     * @param date input Date object
+     * @return equivalent LocalDateTime instance
      */
     public static LocalDateTime dateToLocalDateTime(Date date) {
+        if (date == null) {
+            return null;
+        }
         return LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
     }
 
     /**
-     * Convert Date to LocalDate
+     * Convert Date to LocalDate.
      *
-     * @param date Date
-     * @return LocalDate
+     * @param date input Date object
+     * @return equivalent LocalDate instance
      */
     public static LocalDate dateToLocalDate(Date date) {
-        return dateToLocalDateTime(date).toLocalDate();
+        LocalDateTime ldt = dateToLocalDateTime(date);
+        return ldt != null ? ldt.toLocalDate() : null;
     }
 
     /**
-     * Convert Date to LocalTime
+     * Convert Date to LocalTime.
      *
-     * @param date Date
-     * @return LocalTime
+     * @param date input Date object
+     * @return equivalent LocalTime instance
      */
     public static LocalTime dateToLocalTime(Date date) {
-        return dateToLocalDateTime(date).toLocalTime();
+        LocalDateTime ldt = dateToLocalDateTime(date);
+        return ldt != null ? ldt.toLocalTime() : null;
     }
 
     /**
-     * Convert per-kilometer price to per-meter price
+     * Convert per-kilometer rate to per-meter rate.
      *
-     * @param price per-kilometer price
-     * @return per-meter price
+     * @param price per-kilometer rate as BigDecimal
+     * @return per-meter rate rounded down to 5 decimal places
      */
     public static BigDecimal kiloToMeterPrice(BigDecimal price) {
-        return price.divide(new BigDecimal("1000"), 5, RoundingMode.DOWN);
+        if (price == null) {
+            return BigDecimal.ZERO;
+        }
+        return price.divide(METERS_PER_KM, 5, RoundingMode.DOWN);
     }
 
     /**
-     * Convert per-minute price to per-second price
+     * Convert per-minute rate to per-second rate.
      *
-     * @param price per-minute price
-     * @return per-second price
+     * @param price per-minute rate as BigDecimal
+     * @return per-second rate rounded down to 5 decimal places
      */
     public static BigDecimal minuteToSecondPrice(BigDecimal price) {
-        return price.divide(new BigDecimal("60"), 5, RoundingMode.DOWN);
+        if (price == null) {
+            return BigDecimal.ZERO;
+        }
+        return price.divide(SECONDS_PER_MINUTE, 5, RoundingMode.DOWN);
     }
 
     /**
-     * Convert seconds to minutes
+     * Convert seconds duration to minutes.
      *
      * @param seconds number of seconds
-     * @return number of minutes
+     * @return number of minutes rounded HALF_DOWN to 2 decimal places
      */
     public static double secondToMinute(Double seconds) {
-        return BigDecimal.valueOf(Optional.ofNullable(seconds).orElse(0D)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_DOWN).doubleValue();
+        return BigDecimal.valueOf(Optional.ofNullable(seconds).orElse(0D))
+                .divide(SECONDS_PER_MINUTE, 2, RoundingMode.HALF_DOWN)
+                .doubleValue();
     }
 
     /**
-     * Convert meters to kilometers
+     * Convert meters distance to kilometers.
      *
      * @param meters number of meters
-     * @return number of kilometers
+     * @return number of kilometers rounded HALF_DOWN to 2 decimal places
      */
     public static double meterToKilo(Double meters) {
-        return BigDecimal.valueOf(Optional.ofNullable(meters).orElse(0D)).divide(BigDecimal.valueOf(1000), 2, RoundingMode.HALF_DOWN).doubleValue();
+        return BigDecimal.valueOf(Optional.ofNullable(meters).orElse(0D))
+                .divide(METERS_PER_KM, 2, RoundingMode.HALF_DOWN)
+                .doubleValue();
     }
-
 }
+
