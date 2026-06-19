@@ -1,6 +1,6 @@
 package com.rydr.order.lock;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -8,7 +8,6 @@ import java.util.concurrent.locks.Lock;
 
 import javax.annotation.Resource;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -16,81 +15,80 @@ import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Service;
 
 import com.rydr.common.entity.OrderLock;
-import com.rydr.order.dao.OrderLockMapper;
 
 import lombok.Data;
+
 /**
- * Not used in the current example
- * @author oi
+ * Custom distributed lock implementation using Redis key-value expiration and Lua atomic release.
+ * Ensures only one driver can grab an order concurrently.
  *
+ * @author Rydr Team
  */
 @Service
 @Data
 public class RedisLock implements Lock {
 
-	@Resource
-	private RedisTemplate<Integer, Integer> redisTemplate;
+    private static final long DEFAULT_EXPIRE_SECONDS = 50;
 
-	private OrderLock orderLock;
+    @Resource
+    private RedisTemplate<Integer, Integer> redisTemplate;
 
-	@Override
-	public void lock() {
-		// 1. Try to acquire the lock
-		if(tryLock()) {
-			return;
-		}
-		// 2. Sleep
-		try {
-			Thread.sleep(10);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		// 3. Recursively call again
-		lock();
-	}
+    private OrderLock orderLock;
 
-	/**
-	 * Non-blocking lock attempt: succeeds or fails immediately and returns directly
-	 */
-	@Override
-	public boolean tryLock() {
+    /**
+     * Acquire lock, retrying recursively with short polling sleep intervals until acquired.
+     */
+    @Override
+    public void lock() {
+        if (tryLock()) {
+            return;
+        }
+        try {
+            TimeUnit.MILLISECONDS.sleep(10);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        lock();
+    }
 
-		int orderId = orderLock.getOrderId();
-		int driverId = orderLock.getDriverId();
+    /**
+     * Non-blocking lock attempt using Redis setIfAbsent (SETNX).
+     *
+     * @return true if lock was acquired successfully, false otherwise
+     */
+    @Override
+    public boolean tryLock() {
+        int orderId = orderLock.getOrderId();
+        int driverId = orderLock.getDriverId();
 
-		Boolean b = redisTemplate.opsForValue().setIfAbsent(orderId, driverId, 50, TimeUnit.SECONDS);
-		if(b) {
-			return true;
-		}
-		return false;
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(orderId, driverId, DEFAULT_EXPIRE_SECONDS, TimeUnit.SECONDS);
+        return Boolean.TRUE.equals(success);
+    }
 
-	}
-
-	@Override
-	public void unlock() {
-
-		DefaultRedisScript<List> getRedisScript = new DefaultRedisScript<List>();
+    /**
+     * Release lock atomically using Lua script to verify lock ownership before deletion.
+     */
+    @Override
+    public void unlock() {
+        DefaultRedisScript<List> getRedisScript = new DefaultRedisScript<>();
         getRedisScript.setResultType(List.class);
         getRedisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("luascript/lock.lua")));
 
-		redisTemplate.execute(getRedisScript, Arrays.asList(orderLock.getOrderId()), Arrays.asList(orderLock.getDriverId()));
-	}
+        redisTemplate.execute(getRedisScript, Collections.singletonList(orderLock.getOrderId()), Collections.singletonList(orderLock.getDriverId()));
+    }
 
-	@Override
-	public void lockInterruptibly() throws InterruptedException {
+    @Override
+    public void lockInterruptibly() throws InterruptedException {
+    }
 
-	}
+    @Override
+    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
+        return false;
+    }
 
-	@Override
-	public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-		return false;
-	}
-
-
-	@Override
-	public Condition newCondition() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
+    @Override
+    public Condition newCondition() {
+        return null;
+    }
 }
+
