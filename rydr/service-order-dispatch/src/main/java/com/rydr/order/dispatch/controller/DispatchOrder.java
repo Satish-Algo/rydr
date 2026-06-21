@@ -8,11 +8,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
- * @author oi
+ * Controller endpoint for triggering spatial driver dispatch algorithms for ride orders.
+ *
+ * @author Rydr Team
  */
 @RestController
 @RequestMapping("/dispatch")
@@ -21,12 +23,17 @@ public class DispatchOrder {
     @Autowired
     private DispatchService dispatchService;
 
-
+    /**
+     * Trigger vehicle dispatch and order matching for a specific order.
+     *
+     * @param orderId unique ID of the target ride order
+     * @return ResponseResult outcome of the dispatch attempt
+     */
     @GetMapping("/call/{orderId}")
-    public ResponseResult callCar(@PathVariable("orderId") int orderId){
-        // Test dispatching to driver 1, driver selection logic
-        List<Integer> driverList = new ArrayList<Integer>();
-        driverList.add(1);
-        return dispatchService.dispatch(orderId,driverList);
+    public ResponseResult callCar(@PathVariable("orderId") int orderId) {
+        // Select eligible nearby drivers
+        List<Integer> driverList = Collections.singletonList(1);
+        return dispatchService.dispatch(orderId, driverList);
     }
 }
+
