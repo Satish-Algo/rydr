@@ -1,8 +1,5 @@
 package com.rydr.passenger.controller;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,57 +19,56 @@ import com.rydr.passenger.feign.ServiceForecast;
 import net.sf.json.JSONObject;
 
 /**
+ * Passenger-facing order management and fare estimation endpoints.
  *
- * @author oi
- *
+ * @author Rydr Team
  */
 @RestController
 @RequestMapping("/order")
 public class OrderController {
 
-	@Autowired
-	private ServiceForecast serviceForecast;
+    @Autowired
+    private ServiceForecast serviceForecast;
 
-	@PostMapping("/forecast")
-	public ResponseResult<ForecastResponse> forecast(@RequestBody ForecastRequest forecastRequest) {
+    @Autowired
+    private RestTemplate restTemplate;
 
-		ResponseResult<ForecastResponse> result = serviceForecast.forecast(forecastRequest);
+    /**
+     * Calculate price forecast estimation using OpenFeign declarative HTTP client.
+     *
+     * @param forecastRequest ride pickup and destination coordinates
+     * @return ResponseResult containing estimated fare price details
+     */
+    @PostMapping("/forecast")
+    public ResponseResult<ForecastResponse> forecast(@RequestBody ForecastRequest forecastRequest) {
+        ResponseResult<ForecastResponse> result = serviceForecast.forecast(forecastRequest);
+        return ResponseResult.success(result.getData());
+    }
 
-		return ResponseResult.success(result.getData());
-	}
+    /**
+     * Price forecast endpoint via ribbon load-balanced RestTemplate.
+     *
+     * @param forecastRequest ride pickup and destination coordinates
+     * @return ResponseResult containing estimated fare price details
+     */
+    @PostMapping("/forecast-test")
+    public ResponseResult forecastTest(@RequestBody ForecastRequest forecastRequest) {
+        String destination = "service-valuation";
+        String url = "http://" + destination + "/forecast/single";
 
-
-	/*
-	 * Below demonstrates two invocation methods
-	 */
-	@Autowired
-	private RestTemplate restTemplate;
-
-	@PostMapping("/forecast-test")
-	public ResponseResult forecastTest(@RequestBody ForecastRequest forecastRequest) {
-		/*
-		 * Specific IP (localhost:8060), without LoadBalanced
-		 * Service name (service-valuation), with LoadBalanced
-		 */
-//		String destination = "localhost:8060";
-		String destination = "service-valuation";
-
-		String url = "http://"+destination+"/forecast/single";
-
-		// Request headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        // Request body
+
         JSONObject requestParam = new JSONObject();
         requestParam.put("startLatitude", "1");
         requestParam.put("startLongitude", "1");
         requestParam.put("endLatitude", "1");
         requestParam.put("endLongitude", "1");
-        // Wrap into a request object
+
         HttpEntity entity = new HttpEntity(requestParam, headers);
+        ResponseResult result = restTemplate.exchange(url, HttpMethod.POST, entity, ResponseResult.class).getBody();
 
-		ResponseResult result = restTemplate.exchange(url, HttpMethod.POST,entity,ResponseResult.class).getBody();
-
-		return ResponseResult.success(result.getData());
-	}
+        return ResponseResult.success(result != null ? result.getData() : null);
+    }
 }
+
