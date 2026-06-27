@@ -1,14 +1,16 @@
 version: "3.8"
 
-# Infrastructure services for local development.
+# Infrastructure services for local development and testing.
 # Usage:
-#   docker compose up -d          # start all
+#   docker compose up -d          # start all infrastructure containers
 #   docker compose down -v        # stop and remove volumes
 
 services:
 
   mysql:
     image: mysql:5.7
+    container_name: rydr-mysql
+    restart: unless-stopped
     ports:
       - "${DB_PORT:-3306}:3306"
     environment:
@@ -21,6 +23,8 @@ services:
 
   redis:
     image: redis:6-alpine
+    container_name: rydr-redis
+    restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -28,8 +32,10 @@ services:
 
   activemq:
     image: rmohr/activemq:5.15.9-alpine
+    container_name: rydr-activemq
+    restart: unless-stopped
     ports:
-      - "${ACTIVEMQ_PORT:-61616}:61616"   # JMS
+      - "${ACTIVEMQ_PORT:-61616}:61616"   # JMS wire protocol
       - "8161:8161"                        # Web console
     environment:
       ACTIVEMQ_ADMIN_LOGIN: ${ACTIVEMQ_USER:-admin}
@@ -37,8 +43,10 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    container_name: rydr-rabbitmq
+    restart: unless-stopped
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"      # AMQP
+      - "${RABBITMQ_PORT:-5672}:5672"      # AMQP protocol
       - "15672:15672"                      # Management UI
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
@@ -50,3 +58,4 @@ volumes:
   mysql-data:
   redis-data:
   rabbitmq-data:
+
